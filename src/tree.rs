@@ -80,12 +80,10 @@ impl<T: Ord> Tree<T> {
 
 impl<T: Ord + fmt::Display> fmt::Display for Tree<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        unsafe {
-            if let Some(root) = self.root {
-                write!(f, "{}", *root)
-            } else {
-                write!(f, "[]")
-            }
+        if let Some(root) = self.root {
+            unsafe { write!(f, "{}", *root) }
+        } else {
+            write!(f, "[]")
         }
     }
 }

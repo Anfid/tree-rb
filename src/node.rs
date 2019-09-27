@@ -46,17 +46,19 @@ where
 
 impl<T: Ord + fmt::Display> fmt::Display for Node<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        unsafe {
-            write!(f, "[")?;
-            if let Some(l) = self.left {
+        write!(f, "[")?;
+        if let Some(l) = self.left {
+            unsafe {
                 write!(f, "{}", *l)?;
             }
-            write!(f, "{}", self.data)?;
-            if let Some(r) = self.right {
+        }
+        write!(f, "{}", self.data)?;
+        if let Some(r) = self.right {
+            unsafe {
                 write!(f, "{}", *r)?;
             }
-            write!(f, "]")
         }
+        write!(f, "]")
     }
 }
 
