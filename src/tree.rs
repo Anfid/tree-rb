@@ -5,6 +5,7 @@ use std::fmt;
 #[derive(Default)]
 pub struct Tree<T: Ord> {
     root: Option<*mut Node<T>>,
+    size: usize,
 }
 
 impl<T: Ord> Tree<T> {
@@ -17,7 +18,10 @@ impl<T: Ord> Tree<T> {
     /// let mut tree: Tree<i32> = Tree::new();
     /// ```
     pub fn new() -> Tree<T> {
-        Tree { root: None }
+        Tree {
+            root: None,
+            size: 0,
+        }
     }
 
     /// Checks if tree contains any data.
@@ -39,6 +43,8 @@ impl<T: Ord> Tree<T> {
     /// Insert data in the tree.
     /// (TODO: Tree should be rebalanced after this operation)
     /// (TODO: Do not accept duplicates)
+    /// (TODO: Increment size)
+    /// (TODO: Test performance)
     /// ```
     /// # use tree_rb::Tree;
     /// let mut tree: Tree<i32> = Tree::new();
@@ -72,9 +78,49 @@ impl<T: Ord> Tree<T> {
                 self.root = Some(new_node);
                 *new_node = Node::new(data);
             }
+            self
+        }
+    }
+
+    /// Insert data in the tree, implemented recursively
+    /// (TODO: Tree should be rebalanced after this operation)
+    /// (TODO: Increment size)
+    /// (TODO: Test performance)
+    /// ```
+    /// # use tree_rb::Tree;
+    /// let mut tree: Tree<i32> = Tree::new();
+    ///
+    /// tree.insert_rec(8);
+    /// tree.insert_rec(2);
+    /// ```
+    pub fn insert_rec(&mut self, data: T) -> &mut Self {
+        if let Some(root) = self.root {
+            unsafe {
+                (*root).insert(data);
+            }
+        } else {
+            self.root = Some(unsafe {
+                let new_node: *mut Node<T> = alloc(Layout::new::<Node<T>>()) as *mut Node<T>;
+                *new_node = Node::new(data);
+                new_node
+            })
         }
 
         self
+    }
+}
+
+impl<T: Ord + Copy> Tree<T> {
+    fn in_order_traverse(self) -> Vec<T> {
+        let mut vec = Vec::new();
+
+        if let Some(root) = self.root {
+            unsafe {
+                (*root).in_order_traverse(&mut vec);
+            }
+        }
+
+        vec
     }
 }
 
@@ -88,7 +134,6 @@ impl<T: Ord + fmt::Display> fmt::Display for Tree<T> {
     }
 }
 
-// Currently unimplemented, so memleaks are expected
 impl<T: Ord> Drop for Tree<T> {
     fn drop(&mut self) {
         if let Some(r) = self.root {
@@ -96,5 +141,14 @@ impl<T: Ord> Drop for Tree<T> {
                 Box::from_raw(r);
             }
         }
+    }
+}
+
+impl<T: Ord + Copy> IntoIterator for Tree<T> {
+    type Item = T;
+    type IntoIter = std::vec::IntoIter<T>;
+
+    fn into_iter(self) -> std::vec::IntoIter<T> {
+        self.in_order_traverse().into_iter()
     }
 }

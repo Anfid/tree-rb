@@ -1,3 +1,5 @@
+use std::alloc::{alloc, Layout};
+use std::cmp::Ordering;
 use std::fmt;
 
 #[allow(unused)]
@@ -15,10 +17,7 @@ pub(crate) struct Node<T: Ord> {
     pub(crate) right: Option<*mut Node<T>>,
 }
 
-impl<T> Node<T>
-where
-    T: Ord,
-{
+impl<T: Ord> Node<T> {
     pub(crate) fn new(data: T) -> Node<T> {
         Node {
             data,
@@ -39,8 +38,46 @@ where
         }
     }
 
-    pub(crate) fn insert(&mut self, _data: T) {
-        // TODO
+    pub(crate) fn insert(&mut self, data: T) {
+        match self.data.cmp(&data) {
+            Ordering::Less => unsafe {
+                if let Some(node) = self.right {
+                    (*node).insert(data)
+                } else {
+                    let new_node: *mut Node<T> = alloc(Layout::new::<Node<T>>()) as *mut Node<T>;
+                    *new_node = Node::with_parent(data, self);
+
+                    self.right = Some(new_node);
+                }
+            },
+            Ordering::Greater => unsafe {
+                if let Some(node) = self.left {
+                    (*node).insert(data)
+                } else {
+                    let new_node: *mut Node<T> = alloc(Layout::new::<Node<T>>()) as *mut Node<T>;
+                    *new_node = Node::with_parent(data, self);
+
+                    self.left = Some(new_node);
+                }
+            },
+            Ordering::Equal => {}
+        }
+    }
+}
+
+impl<T: Ord + Copy> Node<T> {
+    pub(crate) fn in_order_traverse(&self, acc: &mut Vec<T>) {
+        if let Some(l) = self.left {
+            unsafe {
+                (*l).in_order_traverse(acc);
+            }
+        }
+        acc.push(self.data);
+        if let Some(r) = self.right {
+            unsafe {
+                (*r).in_order_traverse(acc);
+            }
+        }
     }
 }
 
