@@ -1,5 +1,6 @@
 use crate::node::Node;
-use std::alloc::{alloc, Layout};
+use crate::node::Side::*;
+use std::cmp::Ordering;
 use std::fmt;
 
 #[derive(Default)]
@@ -42,7 +43,6 @@ impl<T: Ord> Tree<T> {
 
     /// Insert data in the tree.
     /// (TODO: Tree should be rebalanced after this operation)
-    /// (TODO: Do not accept duplicates)
     /// (TODO: Increment size)
     /// (TODO: Test performance)
     /// ```
@@ -53,33 +53,37 @@ impl<T: Ord> Tree<T> {
     /// tree.insert(2);
     /// ```
     pub fn insert(&mut self, data: T) -> &mut Self {
-        unsafe {
-            let new_node: *mut Node<T> = alloc(Layout::new::<Node<T>>()) as *mut Node<T>;
-
-            let mut parent = None;
-            let mut node = self.root;
-            while let Some(n) = node {
-                parent = node;
-                if (*n).data > data {
-                    node = (*n).left;
-                } else {
-                    node = (*n).right;
+        if let Some(mut parent) = self.root {
+            loop {
+                match unsafe { (*parent).data.cmp(&data) } {
+                    Ordering::Less => unsafe {
+                        if let Some(n) = (*parent).child(Right) {
+                            parent = n;
+                        } else {
+                            self.size += 1;
+                            Node::with_parent(data, parent, Right);
+                            break;
+                        }
+                    },
+                    Ordering::Greater => unsafe {
+                        if let Some(n) = (*parent).child(Left) {
+                            parent = n;
+                        } else {
+                            self.size += 1;
+                            Node::with_parent(data, parent, Left);
+                            break;
+                        }
+                    },
+                    Ordering::Equal => break,
                 }
             }
-
-            if let Some(p) = parent {
-                if (*p).data > data {
-                    (*p).left = Some(new_node);
-                } else {
-                    (*p).right = Some(new_node);
-                }
-                *new_node = Node::with_parent(data, p);
-            } else {
-                self.root = Some(new_node);
-                *new_node = Node::new(data);
-            }
-            self
+        } else {
+            self.root = Some(unsafe { Node::new(data) });
         }
+
+        //self.insert_rebalance(&mut *new_node);
+
+        self
     }
 
     /// Insert data in the tree, implemented recursively
@@ -99,11 +103,7 @@ impl<T: Ord> Tree<T> {
                 (*root).insert(data);
             }
         } else {
-            self.root = Some(unsafe {
-                let new_node: *mut Node<T> = alloc(Layout::new::<Node<T>>()) as *mut Node<T>;
-                *new_node = Node::new(data);
-                new_node
-            })
+            self.root = Some(unsafe { Node::new(data) })
         }
 
         self
@@ -113,6 +113,7 @@ impl<T: Ord> Tree<T> {
 impl<T: Ord + Copy> Tree<T> {
     fn in_order_traverse(self) -> Vec<T> {
         let mut vec = Vec::new();
+        vec.reserve(self.size);
 
         if let Some(root) = self.root {
             unsafe {
