@@ -60,12 +60,11 @@ impl<T: Ord> Node<T> {
     /// fails otherwise. Sets both pointers, so node lifetime will be
     /// managed by parent.
     pub(crate) fn with_parent(data: T, parent: *mut Node<T>, side: Side) -> *mut Node<T> {
-        unsafe {
-            let new: *mut Node<T> = alloc(Layout::new::<Node<T>>()) as *mut Node<T>;
+            let new: *mut Node<T> = unsafe { alloc(Layout::new::<Node<T>>()) as *mut Node<T> };
 
-            (*(*parent).child_raw(&side)) = Some(new);
+            unsafe { (*(*parent).child_raw(&side)) = Some(new) };
 
-            *new = Node {
+            unsafe { *new = Node {
                 data,
                 color: Color::Red,
                 parent: Some(Parent {
@@ -74,10 +73,9 @@ impl<T: Ord> Node<T> {
                 }),
                 left: None,
                 right: None,
-            };
+            } };
 
             new
-        }
     }
 
     /// Recursive insert function.
